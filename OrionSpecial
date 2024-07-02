@@ -1529,7 +1529,7 @@ verificar_campos() {
         read -s -p "Digite a Senha (ex: @Senha123_): " NOVA_SENHA
         echo ""
 
-        verificar_token "$PORTAINER_URL" "$NOVO_USUARIO" "$NOVA_SENHA" true
+        verificar_token "$PORTAINER_URL" "$NOVO_USUARIO" $(printf '%q' "$NOVA_SENHA") true
     else
         verificar_token "$PORTAINER_URL" "$USUARIO" $(printf '%q' "$SENHA") false
     fi
