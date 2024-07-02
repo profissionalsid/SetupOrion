@@ -1317,7 +1317,7 @@ stack_editavel(){
     ## Pega a senha do portainer
     SENHA=$(grep "Senha: " /root/dados_vps/dados_portainer | awk -F "Senha: " '{print $2}')
     if [ $? -eq 0 ]; then
-        echo -e "5/10 - [ OK ] - Pegando a senha do portainer: $bege$SENHA$reset"
+        echo -e "5/10 - [ OK ] - Pegando a senha do portainer: $bege$(printf '%q' "$SENHA")$reset"
     else
         echo "5/10 - [ OFF ] - Erro ao pegar senha do portainer"
     fi
@@ -1334,14 +1334,14 @@ stack_editavel(){
     #TOKEN=$(grep "Token: " /root/dados_vps/dados_portainer | awk -F "Token: " '{print $2}')
     
     ## Pega um token do portainer
-    #TOKEN=$(curl -k -X POST -H "Content-Type: application/json" -d "{\"username\":\"$USUARIO\",\"password\":\"$SENHA\"}" https://$PORTAINER_URL/api/auth | jq -r .jwt)
+    #TOKEN=$(curl -k -X POST -H "Content-Type: application/json" -d "{\"username\":\"$USUARIO\",\"password\":\"$(printf '%q' "$SENHA")\"}" https://$PORTAINER_URL/api/auth | jq -r .jwt)
 
     TOKEN=""
     Tentativa_atual=0
     Maximo_de_tentativas=6
     
     while [ -z "$TOKEN" ] || [ "$TOKEN" == "null" ]; do
-        TOKEN=$(curl -k -s -X POST -H "Content-Type: application/json" -d "{\"username\":\"$USUARIO\",\"password\":\"$SENHA\"}" https://$PORTAINER_URL/api/auth | jq -r .jwt)
+        TOKEN=$(curl -k -s -X POST -H "Content-Type: application/json" -d "{\"username\":\"$USUARIO\",\"password\":\"$(printf '%q' "$SENHA")\"}" https://$PORTAINER_URL/api/auth | jq -r .jwt)
     
         Tentativa_atual=$((Tentativa_atual + 1))
     
@@ -1381,7 +1381,7 @@ stack_editavel(){
     #fi
 
     ## Salva dados no arquivo do portainer
-    echo -e "[ PORTAINER ]\nDominio do portainer: $PORTAINER_URL\n\nUsuario: $USUARIO\n\nSenha: $SENHA\n\nToken: $TOKEN" > "/root/dados_vps/dados_portainer"
+    echo -e "[ PORTAINER ]\nDominio do portainer: $PORTAINER_URL\n\nUsuario: $USUARIO\n\nSenha: $(printf '%q' "$SENHA")\n\nToken: $TOKEN" > "/root/dados_vps/dados_portainer"
 
     ## Pegando o id do portainer
     ENDPOINT_ID=$(curl -k -s -X GET -H "Authorization: Bearer $TOKEN" https://$PORTAINER_URL/api/endpoints | jq -r '.[] | select(.Name == "primary") | .Id')
@@ -1550,9 +1550,9 @@ verificar_token() {
         #echo -e "Dados a serem testados:"
         #echo "Link do Portainer: $PORTAINER_URL"
         #echo "Usuário: $USUARIO"
-        #echo "Senha: $SENHA"
+        #echo "Senha: $(printf '%q' "$SENHA")"
 
-        RESPONSE=$(curl -s -w "\n%{http_code}" -k -X POST -H "Content-Type: application/json" -d "{\"username\":\"$USUARIO\",\"password\":\"$SENHA\"}" "https://$PORTAINER_URL/api/auth")
+        RESPONSE=$(curl -s -w "\n%{http_code}" -k -X POST -H "Content-Type: application/json" -d "{\"username\":\"$USUARIO\",\"password\":\"$(printf '%q' "$SENHA")\"}" "https://$PORTAINER_URL/api/auth")
         TOKEN=$(echo "$RESPONSE" | sed '$d' | jq -r '.jwt')
         HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
 
@@ -1616,7 +1616,7 @@ verificar_token() {
 
 ## Função para atualizar o arquivo de dados do Portainer com o novo usuário e senha
 atualizar_arquivo() {
-    echo -e "[ PORTAINER ]\nDominio do portainer: $PORTAINER_URL\n\nUsuario: $USUARIO\n\nSenha: $SENHA\n\nToken: $TOKEN" > "/root/dados_vps/dados_portainer"
+    echo -e "[ PORTAINER ]\nDominio do portainer: $PORTAINER_URL\n\nUsuario: $USUARIO\n\nSenha: $(printf '%q' "$SENHA")\n\nToken: $TOKEN" > "/root/dados_vps/dados_portainer"
     echo -e "\nArquivo de dados do Portainer atualizado com sucesso!"
 }
 
@@ -3805,17 +3805,17 @@ criar_banco_mysql_mautic() {
         if CONTAINER_ID=$(docker ps -q --filter "name=mysql"); then
             if [ -n "$CONTAINER_ID" ]; then
                 # Verificar se o banco de dados já existe
-                if docker exec -it "$CONTAINER_ID" mysql -u root -p"$senha_mysql" -e "SHOW DATABASES LIKE 'mautic';" | grep -qw "mautic"; then
+                if docker exec -it "$CONTAINER_ID" mysql -u root -p"$(printf '%q' "$SENHA")_mysql" -e "SHOW DATABASES LIKE 'mautic';" | grep -qw "mautic"; then
                     echo "O banco de dados mautic já existe."
 
                     read -p "Deseja apagar e criar um novo banco de dados? (Y/N): " resposta
                     if [ "$resposta" == "Y" ] || [ "$resposta" == "y" ]; then
                         # Apagar o banco de dados
-                        docker exec -it "$CONTAINER_ID" mysql -u root -p"$senha_mysql" -e "DROP DATABASE mautic;"
+                        docker exec -it "$CONTAINER_ID" mysql -u root -p"$(printf '%q' "$SENHA")_mysql" -e "DROP DATABASE mautic;"
                         echo "Banco de dados mautic apagado com sucesso."
 
                         # Criar o banco de dados novamente
-                        docker exec -it "$CONTAINER_ID" mysql -u root -p"$senha_mysql" -e "CREATE DATABASE mautic;"
+                        docker exec -it "$CONTAINER_ID" mysql -u root -p"$(printf '%q' "$SENHA")_mysql" -e "CREATE DATABASE mautic;"
                         echo "Banco de dados mautic criado com sucesso."
                     else
                         echo "Usando o banco de dados existente."
@@ -3823,10 +3823,10 @@ criar_banco_mysql_mautic() {
                     break
                 else
                     # Criar o banco de dados
-                    docker exec -it "$CONTAINER_ID" mysql -u root -p"$senha_mysql" -e "CREATE DATABASE mautic;"
+                    docker exec -it "$CONTAINER_ID" mysql -u root -p"$(printf '%q' "$SENHA")_mysql" -e "CREATE DATABASE mautic;"
                     
                     # Verificar novamente se o banco de dados foi criado com sucesso
-                    if docker exec -it "$CONTAINER_ID" mysql -u root -p"$senha_mysql" -e "SHOW DATABASES LIKE 'mautic';" | grep -qw "mautic"; then
+                    if docker exec -it "$CONTAINER_ID" mysql -u root -p"$(printf '%q' "$SENHA")_mysql" -e "SHOW DATABASES LIKE 'mautic';" | grep -qw "mautic"; then
                         echo "Banco de dados mautic criado com sucesso."
                         break
                     else
@@ -3851,17 +3851,17 @@ criar_banco_mysql_wordpress() {
         if CONTAINER_ID=$(docker ps -q --filter "name=mysql"); then
             if [ -n "$CONTAINER_ID" ]; then
                 # Verificar se o banco de dados já existe
-                if docker exec -it "$CONTAINER_ID" mysql -u root -p"$senha_mysql" -e "SHOW DATABASES LIKE '$nome_site_wordpress';" | grep -qw "$nome_site_wordpress"; then
+                if docker exec -it "$CONTAINER_ID" mysql -u root -p"$(printf '%q' "$SENHA")_mysql" -e "SHOW DATABASES LIKE '$nome_site_wordpress';" | grep -qw "$nome_site_wordpress"; then
                     echo "O banco de dados $nome_site_wordpress já existe."
 
                     read -p "Deseja apagar e criar um novo banco de dados? (Y/N): " resposta
                     if [ "$resposta" == "Y" ] || [ "$resposta" == "y" ]; then
                         # Apagar o banco de dados
-                        docker exec -it "$CONTAINER_ID" mysql -u root -p"$senha_mysql" -e "DROP DATABASE $nome_site_wordpress;"
+                        docker exec -it "$CONTAINER_ID" mysql -u root -p"$(printf '%q' "$SENHA")_mysql" -e "DROP DATABASE $nome_site_wordpress;"
                         echo "Banco de dados $nome_site_wordpress apagado com sucesso."
 
                         # Criar o banco de dados novamente
-                        docker exec -it "$CONTAINER_ID" mysql -u root -p"$senha_mysql" -e "CREATE DATABASE $nome_site_wordpress;"
+                        docker exec -it "$CONTAINER_ID" mysql -u root -p"$(printf '%q' "$SENHA")_mysql" -e "CREATE DATABASE $nome_site_wordpress;"
                         echo "Banco de dados $nome_site_wordpress criado com sucesso."
                     else
                         echo "Usando o banco de dados existente."
@@ -3869,10 +3869,10 @@ criar_banco_mysql_wordpress() {
                     break
                 else
                     # Criar o banco de dados
-                    docker exec -it "$CONTAINER_ID" mysql -u root -p"$senha_mysql" -e "CREATE DATABASE $nome_site_wordpress;"
+                    docker exec -it "$CONTAINER_ID" mysql -u root -p"$(printf '%q' "$SENHA")_mysql" -e "CREATE DATABASE $nome_site_wordpress;"
                     
                     # Verificar novamente se o banco de dados foi criado com sucesso
-                    if docker exec -it "$CONTAINER_ID" mysql -u root -p"$senha_mysql" -e "SHOW DATABASES LIKE '$nome_site_wordpress';" | grep -qw "$nome_site_wordpress"; then
+                    if docker exec -it "$CONTAINER_ID" mysql -u root -p"$(printf '%q' "$SENHA")_mysql" -e "SHOW DATABASES LIKE '$nome_site_wordpress';" | grep -qw "$nome_site_wordpress"; then
                         echo "Banco de dados $nome_site_wordpress criado com sucesso."
                         break
                     else
@@ -3897,17 +3897,17 @@ criar_banco_mysql_strapi() {
         if CONTAINER_ID=$(docker ps -q --filter "name=mysql"); then
             if [ -n "$CONTAINER_ID" ]; then
                 # Verificar se o banco de dados já existe
-                if docker exec -it "$CONTAINER_ID" mysql -u root -p"$senha_mysql" -e "SHOW DATABASES LIKE 'strapi';" | grep -qw "strapi"; then
+                if docker exec -it "$CONTAINER_ID" mysql -u root -p"$(printf '%q' "$SENHA")_mysql" -e "SHOW DATABASES LIKE 'strapi';" | grep -qw "strapi"; then
                     echo "O banco de dados strapi já existe."
 
                     read -p "Deseja apagar e criar um novo banco de dados? (Y/N): " resposta
                     if [ "$resposta" == "Y" ] || [ "$resposta" == "y" ]; then
                         # Apagar o banco de dados
-                        docker exec -it "$CONTAINER_ID" mysql -u root -p"$senha_mysql" -e "DROP DATABASE strapi;"
+                        docker exec -it "$CONTAINER_ID" mysql -u root -p"$(printf '%q' "$SENHA")_mysql" -e "DROP DATABASE strapi;"
                         echo "Banco de dados strapi apagado com sucesso."
 
                         # Criar o banco de dados novamente
-                        docker exec -it "$CONTAINER_ID" mysql -u root -p"$senha_mysql" -e "CREATE DATABASE strapi;"
+                        docker exec -it "$CONTAINER_ID" mysql -u root -p"$(printf '%q' "$SENHA")_mysql" -e "CREATE DATABASE strapi;"
                         echo "Banco de dados strapi criado com sucesso."
                     else
                         echo "Usando o banco de dados existente."
@@ -3915,10 +3915,10 @@ criar_banco_mysql_strapi() {
                     break
                 else
                     # Criar o banco de dados
-                    docker exec -it "$CONTAINER_ID" mysql -u root -p"$senha_mysql" -e "CREATE DATABASE strapi;"
+                    docker exec -it "$CONTAINER_ID" mysql -u root -p"$(printf '%q' "$SENHA")_mysql" -e "CREATE DATABASE strapi;"
                     
                     # Verificar novamente se o banco de dados foi criado com sucesso
-                    if docker exec -it "$CONTAINER_ID" mysql -u root -p"$senha_mysql" -e "SHOW DATABASES LIKE 'strapi';" | grep -qw "strapi"; then
+                    if docker exec -it "$CONTAINER_ID" mysql -u root -p"$(printf '%q' "$SENHA")_mysql" -e "SHOW DATABASES LIKE 'strapi';" | grep -qw "strapi"; then
                         echo "Banco de dados strapi criado com sucesso."
                         break
                     else
@@ -3943,17 +3943,17 @@ criar_banco_mysql_humhub() {
         if CONTAINER_ID=$(docker ps -q --filter "name=mysql"); then
             if [ -n "$CONTAINER_ID" ]; then
                 # Verificar se o banco de dados já existe
-                if docker exec -it "$CONTAINER_ID" mysql -u root -p"$senha_mysql" -e "SHOW DATABASES LIKE 'humhub';" | grep -qw "humhub"; then
+                if docker exec -it "$CONTAINER_ID" mysql -u root -p"$(printf '%q' "$SENHA")_mysql" -e "SHOW DATABASES LIKE 'humhub';" | grep -qw "humhub"; then
                     echo "O banco de dados humhub já existe."
 
                     read -p "Deseja apagar e criar um novo banco de dados? (Y/N): " resposta
                     if [ "$resposta" == "Y" ] || [ "$resposta" == "y" ]; then
                         # Apagar o banco de dados
-                        docker exec -it "$CONTAINER_ID" mysql -u root -p"$senha_mysql" -e "DROP DATABASE humhub;"
+                        docker exec -it "$CONTAINER_ID" mysql -u root -p"$(printf '%q' "$SENHA")_mysql" -e "DROP DATABASE humhub;"
                         echo "Banco de dados humhub apagado com sucesso."
 
                         # Criar o banco de dados novamente
-                        docker exec -it "$CONTAINER_ID" mysql -u root -p"$senha_mysql" -e "CREATE DATABASE humhub;"
+                        docker exec -it "$CONTAINER_ID" mysql -u root -p"$(printf '%q' "$SENHA")_mysql" -e "CREATE DATABASE humhub;"
                         echo "Banco de dados humhub criado com sucesso."
                     else
                         echo "Usando o banco de dados existente."
@@ -3961,10 +3961,10 @@ criar_banco_mysql_humhub() {
                     break
                 else
                     # Criar o banco de dados
-                    docker exec -it "$CONTAINER_ID" mysql -u root -p"$senha_mysql" -e "CREATE DATABASE humhub;"
+                    docker exec -it "$CONTAINER_ID" mysql -u root -p"$(printf '%q' "$SENHA")_mysql" -e "CREATE DATABASE humhub;"
                     
                     # Verificar novamente se o banco de dados foi criado com sucesso
-                    if docker exec -it "$CONTAINER_ID" mysql -u root -p"$senha_mysql" -e "SHOW DATABASES LIKE 'humhub';" | grep -qw "humhub"; then
+                    if docker exec -it "$CONTAINER_ID" mysql -u root -p"$(printf '%q' "$SENHA")_mysql" -e "SHOW DATABASES LIKE 'humhub';" | grep -qw "humhub"; then
                         echo "Banco de dados humhub criado com sucesso."
                         break
                     else
@@ -4036,7 +4036,7 @@ echo ""
 echo -e "\e[33mUsuário:\e[97m $user_teste\e[0m"
 echo ""
 
-echo -e "\e[33mSenha:\e[97m $senha_teste\e[0m"
+echo -e "\e[33mSenha:\e[97m $(printf '%q' "$SENHA")_teste\e[0m"
 echo ""
 
 echo -e "\e[33mHost:\e[97m $host_teste\e[0m"
@@ -4067,7 +4067,7 @@ sudo apt-get install swaks -y > /dev/null 2>&1
 msg="Se você está lendo isso, o seu SMTP está funcionando =D.
 By: OrionDesign"
 
-if swaks --to "$email_teste" --from "$email_teste" --server "$host_teste" --port "$porta_teste" --auth LOGIN --auth-user "$user_teste" --auth-password "$senha_teste" --tls --body "$msg"; then
+if swaks --to "$email_teste" --from "$email_teste" --server "$host_teste" --port "$porta_teste" --auth LOGIN --auth-user "$user_teste" --auth-password "$(printf '%q' "$SENHA")_teste" --tls --body "$msg"; then
     sleep 2
     clear
     nome_testeemail
@@ -4696,7 +4696,7 @@ services:
 
     environment:
     ## Senha do postgres 
-      - POSTGRES_PASSWORD=$senha_postgres
+      - POSTGRES_PASSWORD=$(printf '%q' "$SENHA")_postgres
 
     deploy:
       mode: replicated
@@ -4747,7 +4747,7 @@ Dominio do postgres: postgres://postgres:5432
 
 Usuario: postgres
 
-Senha: $senha_postgres
+Senha: $(printf '%q' "$SENHA")_postgres
 EOL
 
 cd
@@ -4794,7 +4794,7 @@ services:
       - $nome_rede_interna
 
     environment:
-      - POSTGRES_PASSWORD=$senha_pgvector
+      - POSTGRES_PASSWORD=$(printf '%q' "$SENHA")_pgvector
 
     deploy:
       mode: replicated
@@ -4845,7 +4845,7 @@ Dominio do pgvector: postgres://pgvector:5432
 
 Usuario: postgres
 
-Senha: $senha_pgvector
+Senha: $(printf '%q' "$SENHA")_pgvector
 EOL
 
 cd
@@ -5116,7 +5116,7 @@ services:
 
     environment:
     ## Senha MYSQL
-      - MYSQL_ROOT_PASSWORD=$senha_mysql
+      - MYSQL_ROOT_PASSWORD=$(printf '%q' "$SENHA")_mysql
 
     ## TimeZone
       - TZ=America/Sao_Paulo
@@ -5178,7 +5178,7 @@ Dominio do mysql: mysql
 
 Usuario: mysql ou root
 
-Senha: $senha_mysql
+Senha: $(printf '%q' "$SENHA")_mysql
 
 EOL
 
@@ -5222,7 +5222,7 @@ services:
 
     environment:
     ## Senha MYSQL
-      - MYSQL_ROOT_PASSWORD=$senha_mysql
+      - MYSQL_ROOT_PASSWORD=$(printf '%q' "$SENHA")_mysql
 
     ## TimeZone
       - TZ=America/Sao_Paulo
@@ -5284,7 +5284,7 @@ Dominio do mysql: mysql
 
 Usuario: mysql ou root
 
-Senha: $senha_mysql
+Senha: $(printf '%q' "$SENHA")_mysql
 EOL
 
 ## Mensagem de finalizado
@@ -5303,7 +5303,7 @@ echo ""
 echo -e "\e[97mUsuario:\e[33m root\e[0m"
 echo ""
 
-echo -e "\e[97mSenha:\e[33m $senha_mysql\e[0m"
+echo -e "\e[97mSenha:\e[33m $(printf '%q' "$SENHA")_mysql\e[0m"
 echo ""
 
 ## Creditos do instalador
@@ -5423,7 +5423,7 @@ while true; do
     echo ""
 
     ## Informação sobre Senha de SMTP
-    echo -e "\e[33mSenha do SMTP:\e[97m $senha_email_chatwoot\e[0m"
+    echo -e "\e[33mSenha do SMTP:\e[97m $(printf '%q' "$SENHA")_email_chatwoot\e[0m"
     echo ""
 
     ## Informação sobre Host SMTP
@@ -5574,7 +5574,7 @@ services:
       ## Dados do Postgres
       - POSTGRES_HOST=postgres
       - POSTGRES_USERNAME=postgres
-      - POSTGRES_PASSWORD=$senha_postgres ## Senha do postgres
+      - POSTGRES_PASSWORD=$(printf '%q' "$SENHA")_postgres ## Senha do postgres
       - POSTGRES_DATABASE=chatwoot
 
       ## Armazenamento
@@ -5593,7 +5593,7 @@ services:
       - SMTP_PORT=$porta_smtp_chatwoot ## Porta SMTP
       - SMTP_SSL=$sobre_ssl ## Se a porta for 465 = true | Se a porta for 587 = false
       - SMTP_USERNAME=$user_smtp_chatwoot ## Usuario SMTP
-      - SMTP_PASSWORD=$senha_email_chatwoot ## Senha do SMTP
+      - SMTP_PASSWORD=$(printf '%q' "$SENHA")_email_chatwoot ## Senha do SMTP
       - SMTP_AUTHENTICATION=login
       - SMTP_ENABLE_STARTTLS_AUTO=true
       - SMTP_OPENSSL_VERIFY_MODE=peer
@@ -5672,7 +5672,7 @@ services:
       ## Dados do Postgres
       - POSTGRES_HOST=postgres
       - POSTGRES_USERNAME=postgres
-      - POSTGRES_PASSWORD=$senha_postgres ## Senha do postgres
+      - POSTGRES_PASSWORD=$(printf '%q' "$SENHA")_postgres ## Senha do postgres
       - POSTGRES_DATABASE=chatwoot
 
       ## Armazenamento
@@ -5691,7 +5691,7 @@ services:
       - SMTP_PORT=$porta_smtp_chatwoot ## Porta SMTP
       - SMTP_SSL=$sobre_ssl ## Se a porta for 465 = true | Se a porta for 587 = false
       - SMTP_USERNAME=$user_smtp_chatwoot ## Usuario SMTP
-      - SMTP_PASSWORD=$senha_email_chatwoot ## Senha do SMTP
+      - SMTP_PASSWORD=$(printf '%q' "$SENHA")_email_chatwoot ## Senha do SMTP
       - SMTP_AUTHENTICATION=login
       - SMTP_ENABLE_STARTTLS_AUTO=true
       - SMTP_OPENSSL_VERIFY_MODE=peer
@@ -5966,7 +5966,7 @@ while true; do
     echo ""
 
     ## Informação sobre Senha de SMTP
-    echo -e "\e[33mSenha do SMTP:\e[97m $senha_email_chatwoot\e[0m"
+    echo -e "\e[33mSenha do SMTP:\e[97m $(printf '%q' "$SENHA")_email_chatwoot\e[0m"
     echo ""
 
     ## Informação sobre Host SMTP
@@ -6117,7 +6117,7 @@ services:
       ## Dados do Postgres
       - POSTGRES_HOST=postgres
       - POSTGRES_USERNAME=postgres
-      - POSTGRES_PASSWORD=$senha_postgres ## Senha do postgres
+      - POSTGRES_PASSWORD=$(printf '%q' "$SENHA")_postgres ## Senha do postgres
       - POSTGRES_DATABASE=chatwoot
 
       ## Armazenamento
@@ -6136,7 +6136,7 @@ services:
       - SMTP_PORT=$porta_smtp_chatwoot ## Porta SMTP
       - SMTP_SSL=$sobre_ssl ## Se a porta for 465 = true | Se a porta for 587 = false
       - SMTP_USERNAME=$email_admin_chatwoot ## Email SMTP
-      - SMTP_PASSWORD=$senha_email_chatwoot ## Senha do SMTP
+      - SMTP_PASSWORD=$(printf '%q' "$SENHA")_email_chatwoot ## Senha do SMTP
       - SMTP_AUTHENTICATION=login
       - SMTP_ENABLE_STARTTLS_AUTO=true
       - SMTP_OPENSSL_VERIFY_MODE=peer
@@ -6215,7 +6215,7 @@ services:
       ## Dados do Postgres
       - POSTGRES_HOST=postgres
       - POSTGRES_USERNAME=postgres
-      - POSTGRES_PASSWORD=$senha_postgres ## Senha do postgres
+      - POSTGRES_PASSWORD=$(printf '%q' "$SENHA")_postgres ## Senha do postgres
       - POSTGRES_DATABASE=chatwoot
 
       ## Armazenamento
@@ -6234,7 +6234,7 @@ services:
       - SMTP_PORT=$porta_smtp_chatwoot ## Porta SMTP
       - SMTP_SSL=$sobre_ssl ## Se a porta for 465 = true | Se a porta for 587 = false
       - SMTP_USERNAME=$email_admin_chatwoot ## Email SMTP
-      - SMTP_PASSWORD=$senha_email_chatwoot ## Senha do SMTP
+      - SMTP_PASSWORD=$(printf '%q' "$SENHA")_email_chatwoot ## Senha do SMTP
       - SMTP_AUTHENTICATION=login
       - SMTP_ENABLE_STARTTLS_AUTO=true
       - SMTP_OPENSSL_VERIFY_MODE=peer
@@ -6508,7 +6508,7 @@ sleep 1
 verificar_container_postgres
 if [ $? -eq 0 ]; then
     pegar_senha_postgres > /dev/null 2>&1
-    senha_do_postgres=$senha_postgres
+    senha_do_postgres=$(printf '%q' "$SENHA")_postgres
 else
     senha_do_postgres=SENHA_DO_POSTGRES_AQUI
 fi
@@ -6595,7 +6595,7 @@ services:
 
     ## Importar mensagens para o Chawoot | Descomente para usar
     ## Se estiver usando Chatwoot do Nestor mude o a parte "chatwoot" para "chatwoot_nestor"
-    #- CHATWOOT_IMPORT_DATABASE_CONNECTION_URI=postgresql://postgres:$senha_do_postgres@postgres:5432/chatwoot?sslmode=disable
+    #- CHATWOOT_IMPORT_DATABASE_CONNECTION_URI=postgresql://postgres:$(printf '%q' "$SENHA")_do_postgres@postgres:5432/chatwoot?sslmode=disable
     #- CHATWOOT_IMPORT_DATABASE_PLACEHOLDER_MEDIA_MESSAGE=false ## true = Importar midia | false = Não importar midia 
 
     ## Informações do Webhook
@@ -6941,7 +6941,7 @@ services:
     ## Aivar Banco de Dados Postgres
     - DATABASE_ENABLED=true
     - DATABASE_PROVIDER=postgresql
-    - DATABASE_CONNECTION_URI=postgresql://postgres:$senha_postgres@postgres:5432/evolution
+    - DATABASE_CONNECTION_URI=postgresql://postgres:$(printf '%q' "$SENHA")_postgres@postgres:5432/evolution
     - DATABASE_CONNECTION_CLIENT_NAME=evolution
     - DATABASE_SAVE_DATA_INSTANCE=true
     - DATABASE_SAVE_DATA_NEW_MESSAGE=true
@@ -6966,7 +6966,7 @@ services:
     - CHATWOOT_ENABLED=true
     - CHATWOOT_MESSAGE_DELETE=true
     - CHATWOOT_MESSAGE_READ=true
-    - CHATWOOT_IMPORT_DATABASE_CONNECTION_URI=postgresql://postgres:$senha_do_postgres@postgres:5432/chatwoot?sslmode=disable
+    - CHATWOOT_IMPORT_DATABASE_CONNECTION_URI=postgresql://postgres:$(printf '%q' "$SENHA")_do_postgres@postgres:5432/chatwoot?sslmode=disable
     - CHATWOOT_IMPORT_DATABASE_PLACEHOLDER_MEDIA_MESSAGE=false ## true = Importar midia | false = Não importar midia 
 
     ## Informações do Webhook
@@ -7490,7 +7490,7 @@ while true; do
     echo ""    
     
     ## Informação sobre Senha do Minio
-    echo -e "\e[33mSenha do MinIO:\e[97m $senha_minio\e[0m"
+    echo -e "\e[33mSenha do MinIO:\e[97m $(printf '%q' "$SENHA")_minio\e[0m"
     echo ""
     
     ## Pergunta se as respostas estão corretas
@@ -7556,7 +7556,7 @@ services:
     environment:
       ## Dados de acesso
       - MINIO_ROOT_USER=$user_minio
-      - MINIO_ROOT_PASSWORD=$senha_minio
+      - MINIO_ROOT_PASSWORD=$(printf '%q' "$SENHA")_minio
 
       ## Url do minio
       - MINIO_BROWSER_REDIRECT_URL=https://$url_minio ## Url do minio
@@ -7632,7 +7632,7 @@ Dominio do S3: https://$url_s3
 
 Usuario: $user_minio
 
-Senha: $senha_minio
+Senha: $(printf '%q' "$SENHA")_minio
 
 EOL
 
@@ -7661,7 +7661,7 @@ echo ""
 echo -e "\e[33mUsuario:\e[97m $user_minio\e[0m"
 echo ""  
 
-echo -e "\e[33mSenha:\e[97m $senha_minio\e[0m"
+echo -e "\e[33mSenha:\e[97m $(printf '%q' "$SENHA")_minio\e[0m"
 echo ""
 
 ## Creditos do instalador
@@ -7793,7 +7793,7 @@ while true; do
     echo ""
 
     ## Informação sobre Senha do Email
-    echo -e "\e[33mSenha do Email:\e[97m $senha_email_typebot\e[0m"
+    echo -e "\e[33mSenha do Email:\e[97m $(printf '%q' "$SENHA")_email_typebot\e[0m"
     echo ""
 
     ## Informação sobre Host SMTP
@@ -7912,7 +7912,7 @@ services:
 
     environment:
       ## Dados do Postgres
-      - DATABASE_URL=postgresql://postgres:$senha_postgres@postgres:5432/typebot
+      - DATABASE_URL=postgresql://postgres:$(printf '%q' "$SENHA")_postgres@postgres:5432/typebot
 
       ## Encryption key
       - ENCRYPTION_SECRET=$key_typebot
@@ -7933,7 +7933,7 @@ services:
       - NEXT_PUBLIC_SMTP_FROM='Suporte' <$email_typebot>
       - SMTP_AUTH_DISABLED=false
       - SMTP_USERNAME=$usuario_email_typebot
-      - SMTP_PASSWORD=$senha_email_typebot
+      - SMTP_PASSWORD=$(printf '%q' "$SENHA")_email_typebot
       - SMTP_HOST=$smtp_email_typebot
       - SMTP_PORT=$porta_smtp_typebot
       - SMTP_SECURE=$smtp_secure_typebot
@@ -7979,7 +7979,7 @@ services:
 
     environment:
       ## Dados do Postgres
-      - DATABASE_URL=postgresql://postgres:$senha_postgres@postgres:5432/typebot
+      - DATABASE_URL=postgresql://postgres:$(printf '%q' "$SENHA")_postgres@postgres:5432/typebot
 
       ## Encryption key
       - ENCRYPTION_SECRET=$key_typebot
@@ -8000,7 +8000,7 @@ services:
       - NEXT_PUBLIC_SMTP_FROM='Suporte' <$email_typebot>
       - SMTP_AUTH_DISABLED=false
       - SMTP_USERNAME=$usuario_email_typebot
-      - SMTP_PASSWORD=$senha_email_typebot
+      - SMTP_PASSWORD=$(printf '%q' "$SENHA")_email_typebot
       - SMTP_HOST=$smtp_email_typebot
       - SMTP_PORT=$porta_smtp_typebot
       - SMTP_SECURE=$smtp_secure_typebot
@@ -8266,7 +8266,7 @@ services:
       - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_PORT=5432
       - DB_POSTGRESDB_USER=postgres
-      - DB_POSTGRESDB_PASSWORD=$senha_postgres
+      - DB_POSTGRESDB_PASSWORD=$(printf '%q' "$SENHA")_postgres
 
       ## Encryption Key
       - N8N_ENCRYPTION_KEY=$encryption_key
@@ -8332,7 +8332,7 @@ services:
       - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_PORT=5432
       - DB_POSTGRESDB_USER=postgres
-      - DB_POSTGRESDB_PASSWORD=$senha_postgres
+      - DB_POSTGRESDB_PASSWORD=$(printf '%q' "$SENHA")_postgres
 
       ## Encryption Key
       - N8N_ENCRYPTION_KEY=$encryption_key
@@ -8398,7 +8398,7 @@ services:
       - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_PORT=5432
       - DB_POSTGRESDB_USER=postgres
-      - DB_POSTGRESDB_PASSWORD=$senha_postgres
+      - DB_POSTGRESDB_PASSWORD=$(printf '%q' "$SENHA")_postgres
 
       ## Encryption Key
       - N8N_ENCRYPTION_KEY=$encryption_key
@@ -8681,7 +8681,7 @@ services:
      - DATABASE_HOST=postgres
      - DATABASE_PORT=5432
      - DATABASE_USER=postgres
-     - DATABASE_PASSWORD=$senha_postgres
+     - DATABASE_PASSWORD=$(printf '%q' "$SENHA")_postgres
      - DATABASE_NAME=flowise
 
      ## Encryption Key
@@ -9187,7 +9187,7 @@ services:
       - DB_HOST=postgres
       - DB_DATABASE=nocobase
       - DB_USER=postgres
-      - DB_PASSWORD=$senha_postgres
+      - DB_PASSWORD=$(printf '%q' "$SENHA")_postgres
 
       ## Paths de URL
       - LOCAL_STORAGE_BASE_URL=/storage/uploads
@@ -9437,7 +9437,7 @@ services:
       - BP_PRODUCTION=true
 
       ## Dados Postgres
-      - DATABASE_URL=postgresql://postgres:$senha_postgres@postgres:5432/botpress
+      - DATABASE_URL=postgresql://postgres:$(printf '%q' "$SENHA")_postgres@postgres:5432/botpress
 
       ## Dados Redis
       - REDIS_URL=redis://redis:6379
@@ -9722,7 +9722,7 @@ services:
       - WORDPRESS_DB_HOST=mysql
       - WORDPRESS_DB_PORT=3306
       - WORDPRESS_DB_USER=root
-      - WORDPRESS_DB_PASSWORD=$senha_mysql
+      - WORDPRESS_DB_PASSWORD=$(printf '%q' "$SENHA")_mysql
 
       ## Redis
       - WP_REDIS_HOST=redis
@@ -10072,7 +10072,7 @@ services:
       - REDIS_URL=redis://redis:6379/4
 
       ## Dados postgres:
-      - DATABASE_URL=postgresql://postgres:$senha_postgres@postgres:5432/baserow
+      - DATABASE_URL=postgresql://postgres:$(printf '%q' "$SENHA")_postgres@postgres:5432/baserow
 
     deploy:
       mode: replicated
@@ -10934,7 +10934,7 @@ while true; do
     echo ""    
     
     ## Informação sobre Senha SMTP
-    echo -e "\e[33mSenha SMTP:\e[97m $senha_email_calcom\e[0m"
+    echo -e "\e[33mSenha SMTP:\e[97m $(printf '%q' "$SENHA")_email_calcom\e[0m"
     echo ""
     
     ## Informação sobre Host SMTP
@@ -11039,14 +11039,14 @@ services:
       - CALENDSO_ENCRYPTION_KEY=$secret
 
     ## Dados Postgress
-      - DATABASE_URL=postgresql://postgres:$senha_postgres@postgres:5432/calcom
+      - DATABASE_URL=postgresql://postgres:$(printf '%q' "$SENHA")_postgres@postgres:5432/calcom
 
     ## Configurações de Email e SMTP
       - EMAIL_FROM=$email_calcom
       - EMAIL_SERVER_HOST=$smtp_email_calcom
       - EMAIL_SERVER_PORT=$porta_smtp_calcom
       - EMAIL_SERVER_USER=$user_calcom
-      - EMAIL_SERVER_PASSWORD=$senha_email_calcom
+      - EMAIL_SERVER_PASSWORD=$(printf '%q' "$SENHA")_email_calcom
 
     ## Nodes
       - NODE_ENV=production
@@ -11234,7 +11234,7 @@ while true; do
     echo ""    
 
     ## Informação sobre Senha Admin
-    echo -e "\e[33mSenha do Admin:\e[97m $senha_email_mautic\e[0m"
+    echo -e "\e[33mSenha do Admin:\e[97m $(printf '%q' "$SENHA")_email_mautic\e[0m"
     echo ""
 
     ## Pergunta se as respostas estão corretas
@@ -11324,12 +11324,12 @@ services:
       - MAUTIC_DB_HOST=mysql
       - MAUTIC_DB_PORT=3306
       - MAUTIC_DB_USER=root
-      - MAUTIC_DB_PASSWORD=$senha_mysql
+      - MAUTIC_DB_PASSWORD=$(printf '%q' "$SENHA")_mysql
       
       ## Dados de acesso
       - MAUTIC_ADMIN_EMAIL=$email_mautic
       - MAUTIC_ADMIN_USERNAME=$user_mautic
-      - MAUTIC_ADMIN_PASSWORD=$senha_email_mautic
+      - MAUTIC_ADMIN_PASSWORD=$(printf '%q' "$SENHA")_email_mautic
       - MAUTIC_URL=https://$url_mautic
 
       ## Configurações
@@ -11378,12 +11378,12 @@ services:
       - MAUTIC_DB_HOST=mysql
       - MAUTIC_DB_PORT=3306
       - MAUTIC_DB_USER=root
-      - MAUTIC_DB_PASSWORD=$senha_mysql
+      - MAUTIC_DB_PASSWORD=$(printf '%q' "$SENHA")_mysql
       
       ## Dados de acesso
       - MAUTIC_ADMIN_EMAIL=$email_mautic
       - MAUTIC_ADMIN_USERNAME=$user_mautic
-      - MAUTIC_ADMIN_PASSWORD=$senha_email_mautic
+      - MAUTIC_ADMIN_PASSWORD=$(printf '%q' "$SENHA")_email_mautic
       - MAUTIC_URL=https://$url_mautic
 
       ## Configurações
@@ -11424,12 +11424,12 @@ services:
       - MAUTIC_DB_HOST=mysql
       - MAUTIC_DB_PORT=3306
       - MAUTIC_DB_USER=root
-      - MAUTIC_DB_PASSWORD=$senha_mysql
+      - MAUTIC_DB_PASSWORD=$(printf '%q' "$SENHA")_mysql
       
       ## Dados de acesso
       - MAUTIC_ADMIN_EMAIL=$email_mautic
       - MAUTIC_ADMIN_USERNAME=$user_mautic
-      - MAUTIC_ADMIN_PASSWORD=$senha_email_mautic
+      - MAUTIC_ADMIN_PASSWORD=$(printf '%q' "$SENHA")_email_mautic
       - MAUTIC_URL=https://$url_mautic
 
       ## Configurações
@@ -11509,7 +11509,7 @@ Usuario: $user_mautic
 
 Email: $email_mautic
 
-Senha: $senha_email_mautic
+Senha: $(printf '%q' "$SENHA")_email_mautic
 
 EOL
 
@@ -11538,7 +11538,7 @@ echo ""
 echo -e "\e[33mEmail:\e[97m $email_mautic\e[0m"
 echo ""
 
-echo -e "\e[33mSenha:\e[97m $senha_email_mautic\e[0m"
+echo -e "\e[33mSenha:\e[97m $(printf '%q' "$SENHA")_email_mautic\e[0m"
 echo ""
 
 ## Creditos do instalador
@@ -12068,7 +12068,7 @@ while true; do
     echo ""
 
     ## Informação sobre a senha
-    echo -e "\e[33mSenha MOTOR:\e[97m $senha_email_woofed\e[0m"
+    echo -e "\e[33mSenha MOTOR:\e[97m $(printf '%q' "$SENHA")_email_woofed\e[0m"
     echo ""
 
     ## Pergunta se as respostas estão corretas
@@ -12186,7 +12186,7 @@ services:
 
       ## Credenciais Motor
       - MOTOR_AUTH_USERNAME=$email_admin_woofed
-      - MOTOR_AUTH_PASSWORD=$senha_email_woofed
+      - MOTOR_AUTH_PASSWORD=$(printf '%q' "$SENHA")_email_woofed
 
       ## Endpoints Evolution API
       $EVOLUTION_API_ENDPOINT ## BaseUrl
@@ -12199,7 +12199,7 @@ services:
       #- OPENAI_API_KEY=
 
       ## Dados PgVector
-      - DATABASE_URL=postgres://postgres:$senha_pgvector@pgvector:5432/woofedcrm
+      - DATABASE_URL=postgres://postgres:$(printf '%q' "$SENHA")_pgvector@pgvector:5432/woofedcrm
 
       ## Dados Redis
       - REDIS_URL=redis://redis:6379/0
@@ -12260,7 +12260,7 @@ services:
 
       ## Credenciais Motor
       - MOTOR_AUTH_USERNAME=$email_admin_woofed
-      - MOTOR_AUTH_PASSWORD=$senha_email_woofed
+      - MOTOR_AUTH_PASSWORD=$(printf '%q' "$SENHA")_email_woofed
 
       ## Endpoints Evolution API
       $EVOLUTION_API_ENDPOINT ## BaseUrl
@@ -12273,7 +12273,7 @@ services:
       #- OPENAI_API_KEY=
 
       ## Dados PgVector
-      - DATABASE_URL=postgres://postgres:$senha_pgvector@pgvector:5432/woofedcrm
+      - DATABASE_URL=postgres://postgres:$(printf '%q' "$SENHA")_pgvector@pgvector:5432/woofedcrm
 
       ## Dados Redis
       - REDIS_URL=redis://redis:6379/0
@@ -12323,7 +12323,7 @@ services:
 
       ## Credenciais Motor
       - MOTOR_AUTH_USERNAME=$email_admin_woofed
-      - MOTOR_AUTH_PASSWORD=$senha_email_woofed
+      - MOTOR_AUTH_PASSWORD=$(printf '%q' "$SENHA")_email_woofed
 
       ## Endpoints Evolution API
       $EVOLUTION_API_ENDPOINT ## BaseUrl
@@ -12336,7 +12336,7 @@ services:
       #- OPENAI_API_KEY=
 
       ## Dados PgVector
-      - DATABASE_URL=postgres://postgres:$senha_pgvector@pgvector:5432/woofedcrm
+      - DATABASE_URL=postgres://postgres:$(printf '%q' "$SENHA")_pgvector@pgvector:5432/woofedcrm
 
       ## Dados Redis
       - REDIS_URL=redis://redis:6379/0
@@ -12451,7 +12451,7 @@ Acesso ao Motor: https://$url_woofed/motor_admin
 
 Usuario do Motor: $email_admin_woofed
 
-Senha do Motor: $senha_email_woofed
+Senha do Motor: $(printf '%q' "$SENHA")_email_woofed
 EOL
 
 cd
@@ -12485,7 +12485,7 @@ echo ""
 echo -e "\e[97mUser MOTOR:\e[33m $email_admin_woofed\e[0m"
 echo ""
 
-echo -e "\e[97mSenha MOTOR:\e[33m $senha_email_woofed\e[0m"
+echo -e "\e[97mSenha MOTOR:\e[33m $(printf '%q' "$SENHA")_email_woofed\e[0m"
 echo ""
 
 ## Creditos do instalador
@@ -12587,7 +12587,7 @@ while true; do
     echo ""
     
     ## Informação sobre Senha
-    echo -e "\e[33mSenha SMTP:\e[97m $senha_formbricks\e[0m"
+    echo -e "\e[33mSenha SMTP:\e[97m $(printf '%q' "$SENHA")_formbricks\e[0m"
     echo ""
     
     ## Informação sobre Host
@@ -12685,7 +12685,7 @@ services:
       - NEXTAUTH_URL=https://$url_formbricks
 
       ## Banco de dados Postgres
-      - DATABASE_URL=postgresql://postgres:$senha_postgres@postgres:5432/formbricks
+      - DATABASE_URL=postgresql://postgres:$(printf '%q' "$SENHA")_postgres@postgres:5432/formbricks
 
       ## Licença Enterprise ou Self-hosting
       ## Solicitar licenta Self-hosting --> https://oriondesign.art.br/formbricks_licence/ <-- ##
@@ -12702,7 +12702,7 @@ services:
       - SMTP_PORT=$porta_formbricks
       - SMTP_SECURE_ENABLED=$ssl_formbricks #(0= false | 1= true)
       - SMTP_USER=$user_smtp_formbricks
-      - SMTP_PASSWORD=$senha_formbricks
+      - SMTP_PASSWORD=$(printf '%q' "$SENHA")_formbricks
 
       ## Ativar/Desativar registros e convites (0= false | 1= true)
       - SIGNUP_DISABLED=0
@@ -12972,7 +12972,7 @@ services:
       - NC_PUBLIC_URL=https://$url_nocodb
 
       ## Dados Postgres
-      - NC_DB=pg://postgres:5432?u=postgres&p=$senha_postgres&d=nocodb
+      - NC_DB=pg://postgres:5432?u=postgres&p=$(printf '%q' "$SENHA")_postgres&d=nocodb
 
       ## Desativar Telemetria
       - NC_DISABLE_TELE=true  
@@ -13215,7 +13215,7 @@ services:
       - NEXT_PUBLIC_SIGN_UP_DISABLED=false
 
       ## Dados Postgres
-      - DATABASE_URL=postgresql://postgres:$senha_postgres@postgres:5432/langfuse
+      - DATABASE_URL=postgresql://postgres:$(printf '%q' "$SENHA")_postgres@postgres:5432/langfuse
 
       ## Secrets Key
       - NEXTAUTH_SECRET=$key_secret
@@ -13471,7 +13471,7 @@ services:
       - MB_DB_DBNAME=metabase
       - MB_DB_PORT=5432
       - MB_DB_USER=postgres
-      - MB_DB_PASS=$senha_postgres
+      - MB_DB_PASS=$(printf '%q' "$SENHA")_postgres
       - MB_DB_HOST=postgres
       - MB_AUTOMIGRATE=false
 
@@ -13689,7 +13689,7 @@ services:
       ## Dados postgres do Odoo
       - HOST=odoo_db
       - USER=odoo
-      - PASSWORD=$senha_postgres_odoo
+      - PASSWORD=$(printf '%q' "$SENHA")_postgres_odoo
 
     deploy:
       placement:
@@ -13719,7 +13719,7 @@ services:
     environment:
       ## Dados Postgres
       - POSTGRES_DB=postgres
-      - POSTGRES_PASSWORD=$senha_postgres_odoo
+      - POSTGRES_PASSWORD=$(printf '%q' "$SENHA")_postgres_odoo
       - POSTGRES_USER=odoo
       - PGDATA=/var/lib/postgresql/data/pgdata
     deploy:
@@ -13918,7 +13918,7 @@ while true; do
     echo ""
 
     ## Informação sobre Senha de SMTP
-    echo -e "\e[33mSenha do SMTP:\e[97m $senha_email_chatwoot\e[0m"
+    echo -e "\e[33mSenha do SMTP:\e[97m $(printf '%q' "$SENHA")_email_chatwoot\e[0m"
     echo ""
 
     ## Informação sobre Host SMTP
@@ -14047,7 +14047,7 @@ services:
       - REDIS_URL=redis://redis:6379
       - POSTGRES_HOST=postgres
       - POSTGRES_USERNAME=postgres
-      - POSTGRES_PASSWORD=$senha_postgres ## Senha do postgres
+      - POSTGRES_PASSWORD=$(printf '%q' "$SENHA")_postgres ## Senha do postgres
       - POSTGRES_DATABASE=chatwoot_uno
       - ACTIVE_STORAGE_SERVICE=local
       - RAILS_LOG_TO_STDOUT=true
@@ -14058,7 +14058,7 @@ services:
       - SMTP_PORT=$porta_smtp_chatwoot ## Porta SMTP
       - SMTP_SSL=$sobre_ssl ## Se a porta for 465 = true | Se a porta for 587 = false
       - SMTP_USERNAME=$email_admin_chatwoot ## Email SMTP
-      - SMTP_PASSWORD=$senha_email_chatwoot ## Senha do SMTP
+      - SMTP_PASSWORD=$(printf '%q' "$SENHA")_email_chatwoot ## Senha do SMTP
       - SMTP_AUTHENTICATION=login
       - SMTP_ENABLE_STARTTLS_AUTO=true
       - SMTP_OPENSSL_VERIFY_MODE=peer
@@ -14107,7 +14107,7 @@ services:
       - REDIS_URL=redis://redis:6379
       - POSTGRES_HOST=postgres
       - POSTGRES_USERNAME=postgres
-      - POSTGRES_PASSWORD=$senha_postgres ## Senha do postgres
+      - POSTGRES_PASSWORD=$(printf '%q' "$SENHA")_postgres ## Senha do postgres
       - POSTGRES_DATABASE=chatwoot_uno
       - ACTIVE_STORAGE_SERVICE=local
       - RAILS_LOG_TO_STDOUT=true
@@ -14118,7 +14118,7 @@ services:
       - SMTP_PORT=$porta_smtp_chatwoot ## Porta SMTP
       - SMTP_SSL=$sobre_ssl ## Se a porta for 465 = true | Se a porta for 587 = false
       - SMTP_USERNAME=$email_admin_chatwoot ## Email SMTP
-      - SMTP_PASSWORD=$senha_email_chatwoot ## Senha do SMTP
+      - SMTP_PASSWORD=$(printf '%q' "$SENHA")_email_chatwoot ## Senha do SMTP
       - SMTP_AUTHENTICATION=login
       - SMTP_ENABLE_STARTTLS_AUTO=true
       - SMTP_OPENSSL_VERIFY_MODE=peer
@@ -14386,7 +14386,7 @@ while true; do
     echo ""
 
     ## Informação sobre Senha de SMTP
-    echo -e "\e[33mSenha do SMTP:\e[97m $senha_email_chatwoot\e[0m"
+    echo -e "\e[33mSenha do SMTP:\e[97m $(printf '%q' "$SENHA")_email_chatwoot\e[0m"
     echo ""
 
     ## Informação sobre Host SMTP
@@ -14539,7 +14539,7 @@ services:
       ## Dados do Postgres
       - POSTGRES_HOST=postgres
       - POSTGRES_USERNAME=postgres
-      - POSTGRES_PASSWORD=$senha_postgres ## Senha do postgres
+      - POSTGRES_PASSWORD=$(printf '%q' "$SENHA")_postgres ## Senha do postgres
       - POSTGRES_DATABASE=chatwoot_nestor
 
       ## Armazenamento
@@ -14558,7 +14558,7 @@ services:
       - SMTP_PORT=$porta_smtp_chatwoot ## Porta SMTP
       - SMTP_SSL=$sobre_ssl ## Se a porta for 465 = true | Se a porta for 587 = false
       - SMTP_USERNAME=$user_smtp_chatwoot ## Usuario SMTP
-      - SMTP_PASSWORD=$senha_email_chatwoot ## Senha do SMTP
+      - SMTP_PASSWORD=$(printf '%q' "$SENHA")_email_chatwoot ## Senha do SMTP
       - SMTP_AUTHENTICATION=login
       - SMTP_ENABLE_STARTTLS_AUTO=true
       - SMTP_OPENSSL_VERIFY_MODE=peer
@@ -14637,7 +14637,7 @@ services:
       ## Dados do Postgres
       - POSTGRES_HOST=postgres
       - POSTGRES_USERNAME=postgres
-      - POSTGRES_PASSWORD=$senha_postgres ## Senha do postgres
+      - POSTGRES_PASSWORD=$(printf '%q' "$SENHA")_postgres ## Senha do postgres
       - POSTGRES_DATABASE=chatwoot_nestor
 
       ## Armazenamento
@@ -14656,7 +14656,7 @@ services:
       - SMTP_PORT=$porta_smtp_chatwoot ## Porta SMTP
       - SMTP_SSL=$sobre_ssl ## Se a porta for 465 = true | Se a porta for 587 = false
       - SMTP_USERNAME=$user_smtp_chatwoot ## Usuario SMTP
-      - SMTP_PASSWORD=$senha_email_chatwoot ## Senha do SMTP
+      - SMTP_PASSWORD=$(printf '%q' "$SENHA")_email_chatwoot ## Senha do SMTP
       - SMTP_AUTHENTICATION=login
       - SMTP_ENABLE_STARTTLS_AUTO=true
       - SMTP_OPENSSL_VERIFY_MODE=peer
@@ -14961,7 +14961,7 @@ while true; do
     echo ""
 
 
-    echo -e "\e[33mSenha RabbitMq:\e[97m $senha_rabbit_mqs\e[0m"
+    echo -e "\e[33mSenha RabbitMq:\e[97m $(printf '%q' "$SENHA")_rabbit_mqs\e[0m"
     echo ""
 
     ## Pergunta se as respostas estão corretas
@@ -15058,7 +15058,7 @@ services:
       - STORAGE_FORCE_PATH_STYLE=true
 
       ## Dados do RabbitMQ
-      - AMQP_URL=amqp://$user_rabbit_mqs:$senha_rabbit_mqs@rabbitmq:5672/unoapi
+      - AMQP_URL=amqp://$user_rabbit_mqs:$(printf '%q' "$SENHA")_rabbit_mqs@rabbitmq:5672/unoapi
       
       ## Dados do Redis
       - REDIS_URL=redis://redis:6379
@@ -15355,7 +15355,7 @@ services:
       - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_PORT=5432
       - DB_POSTGRESDB_USER=postgres
-      - DB_POSTGRESDB_PASSWORD=$senha_postgres
+      - DB_POSTGRESDB_PASSWORD=$(printf '%q' "$SENHA")_postgres
 
       ## Dados do Quepasa
 
@@ -15451,7 +15451,7 @@ services:
       - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_PORT=5432
       - DB_POSTGRESDB_USER=postgres
-      - DB_POSTGRESDB_PASSWORD=$senha_postgres
+      - DB_POSTGRESDB_PASSWORD=$(printf '%q' "$SENHA")_postgres
 
       ## Dados do Quepasa
 
@@ -15547,7 +15547,7 @@ services:
       - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_PORT=5432
       - DB_POSTGRESDB_USER=postgres
-      - DB_POSTGRESDB_PASSWORD=$senha_postgres
+      - DB_POSTGRESDB_PASSWORD=$(printf '%q' "$SENHA")_postgres
 
       ## Dados do Quepasa
 
@@ -16096,7 +16096,7 @@ while true; do
     echo ""
 
     ## Informação sobre Senha do Email
-    echo -e "\e[33mSenha do Email:\e[97m $senha_email_dify\e[0m"
+    echo -e "\e[33mSenha do Email:\e[97m $(printf '%q' "$SENHA")_email_dify\e[0m"
     echo ""
 
     ## Informação sobre Host SMTP
@@ -16271,7 +16271,7 @@ services:
       ## Dados Postgres
       - MIGRATION_ENABLED=true
       - DB_USERNAME=postgres
-      - DB_PASSWORD=$senha_postgres
+      - DB_PASSWORD=$(printf '%q' "$SENHA")_postgres
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_DATABASE=dify
@@ -16309,7 +16309,7 @@ services:
       - SMTP_SERVER=$smtp_email_dify
       - SMTP_PORT=$porta_smtp_dify
       - SMTP_USERNAME=$user_email_dify
-      - SMTP_PASSWORD=$senha_email_dify
+      - SMTP_PASSWORD=$(printf '%q' "$SENHA")_email_dify
 
       ## Sentry
       - SENTRY_DSN=
@@ -16350,7 +16350,7 @@ services:
 
       ## Dados Postgres
       - DB_USERNAME=postgres
-      - DB_PASSWORD=$senha_postgres
+      - DB_PASSWORD=$(printf '%q' "$SENHA")_postgres
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_DATABASE=dify
@@ -16378,7 +16378,7 @@ services:
       - SMTP_SERVER=$smtp_email_dify
       - SMTP_PORT=$porta_smtp_dify
       - SMTP_USERNAME=$user_email_dify
-      - SMTP_PASSWORD=$senha_email_dify
+      - SMTP_PASSWORD=$(printf '%q' "$SENHA")_email_dify
 
     depends_on:
       - postgres
@@ -16925,7 +16925,7 @@ while true; do
     echo ""
 
     ## Informação sobre URL do affine
-    echo -e "\e[33mSenha de Admin:\e[97m $senha_affine\e[0m"
+    echo -e "\e[33mSenha de Admin:\e[97m $(printf '%q' "$SENHA")_affine\e[0m"
     echo ""
 
     ## Informação sobre URL do affine
@@ -16933,7 +16933,7 @@ while true; do
     echo ""
 
     ## Informação sobre URL do affine
-    echo -e "\e[33mSenha SMTP:\e[97m $senha_smtp_affine\e[0m"
+    echo -e "\e[33mSenha SMTP:\e[97m $(printf '%q' "$SENHA")_smtp_affine\e[0m"
     echo ""
 
     ## Informação sobre URL do affine
@@ -17044,20 +17044,20 @@ services:
     environment:
       ## Dados de acesso
       - AFFINE_ADMIN_EMAIL=$email_affine
-      - AFFINE_ADMIN_PASSWORD=$senha_affine
+      - AFFINE_ADMIN_PASSWORD=$(printf '%q' "$SENHA")_affine
       - AFFINE_SERVER_HOST=$url_affine
 
       ## Dados do SMTP
       - MAILER_USER=$email_smtp_affine
-      - MAILER_PASSWORD=$senha_smtp_affine
+      - MAILER_PASSWORD=$(printf '%q' "$SENHA")_smtp_affine
       - MAILER_HOST=$host_smtp_affine
       - MAILER_PORT=$porta_smtp_affine
 
       ## Dados do Postgres
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=$senha_postgres
+      - POSTGRES_PASSWORD=$(printf '%q' "$SENHA")_postgres
       - POSTGRES_DB=affine
-      - DATABASE_URL=postgres://postgres:$senha_postgres@postgres:5432/affine?sslmode=disable
+      - DATABASE_URL=postgres://postgres:$(printf '%q' "$SENHA")_postgres@postgres:5432/affine?sslmode=disable
       - PGDATA=/var/lib/postgresql/data/pgdata
 
       ## Outras configurações
@@ -17131,7 +17131,7 @@ Dominio do Affine: https://$url_affine
 
 Usuario: $email_affine
 
-Senha: $senha_affine
+Senha: $(printf '%q' "$SENHA")_affine
 
 EOL
 
@@ -17157,7 +17157,7 @@ echo ""
 echo -e "\e[33mUsuario:\e[97m $email_affine\e[0m"
 echo ""
 
-echo -e "\e[33mSenha:\e[97m $senha_affine\e[0m"
+echo -e "\e[33mSenha:\e[97m $(printf '%q' "$SENHA")_affine\e[0m"
 echo ""
 
 ## Creditos do instalador
@@ -17253,7 +17253,7 @@ while true; do
     echo ""    
 
     ## Informação sobre URL do docuseal
-    echo -e "\e[33mSenha SMTP:\e[97m $senha_smtp_docuseal\e[0m"
+    echo -e "\e[33mSenha SMTP:\e[97m $(printf '%q' "$SENHA")_smtp_docuseal\e[0m"
     echo ""
 
     ## Informação sobre URL do docuseal
@@ -17357,11 +17357,11 @@ services:
       - SECRET_KEY_BASE=$key_docuseal
 
       ## Dados do Postgres
-      - DATABASE_URL=postgresql://postgres:$senha_postgres@postgres:5432/docuseal
+      - DATABASE_URL=postgresql://postgres:$(printf '%q' "$SENHA")_postgres@postgres:5432/docuseal
 
       ## Dados SMTP
       - SMTP_USERNAME=$user_smtp_docuseal
-      - SMTP_PASSWORD=$senha_smtp_docuseal
+      - SMTP_PASSWORD=$(printf '%q' "$SENHA")_smtp_docuseal
       - SMTP_ADDRESS=$host_smtp_docuseal
       - SMTP_PORT=$porta_smtp_docuseal
       - SMTP_FROM=$email_smtp_docuseal
@@ -17580,7 +17580,7 @@ while true; do
     echo ""
 
     ## Informação sobre URL do directus
-    echo -e "\e[33mSenha de Admin:\e[97m $senha_directus\e[0m"
+    echo -e "\e[33mSenha de Admin:\e[97m $(printf '%q' "$SENHA")_directus\e[0m"
     echo ""
 
     ## Informação sobre URL do directus
@@ -17588,7 +17588,7 @@ while true; do
     echo ""
 
     ## Informação sobre URL do directus
-    echo -e "\e[33mSenha SMTP:\e[97m $senha_smtp_directus\e[0m"
+    echo -e "\e[33mSenha SMTP:\e[97m $(printf '%q' "$SENHA")_smtp_directus\e[0m"
     echo ""
 
     ## Informação sobre URL do directus
@@ -17717,12 +17717,12 @@ services:
     environment:
       ## Dados de acesso
       - ADMIN_EMAIL=$email_directus
-      - ADMIN_PASSWORD=$senha_directus
+      - ADMIN_PASSWORD=$(printf '%q' "$SENHA")_directus
       - PUBLIC_URL=https://$url_directus
 
       ## Dados SMTP
       - EMAIL_SMTP_USER=$email_smtp_directus
-      - EMAIL_SMTP_PASSWORD=$senha_smtp_directus
+      - EMAIL_SMTP_PASSWORD=$(printf '%q' "$SENHA")_smtp_directus
       - EMAIL_SMTP_HOST=$host_smtp_directus
       - EMAIL_SMTP_PORT=$porta_smtp_directus
       - EMAIL_SMTP_SECURE=$ssl_smtp_directus
@@ -17748,8 +17748,8 @@ services:
       - DB_PORT=5432
       - DB_DATABASE=directus
       - DB_USER=postgres
-      - DB_PASSWORD=$senha_postgres
-      - DB_CONNECTION_STRING=postgresql://postgres:$senha_postgres@postgres:5432/directus
+      - DB_PASSWORD=$(printf '%q' "$SENHA")_postgres
+      - DB_CONNECTION_STRING=postgresql://postgres:$(printf '%q' "$SENHA")_postgres@postgres:5432/directus
       - DB_PREFIX=drcts_
 
     deploy:
@@ -17816,7 +17816,7 @@ Dominio do directus: https://$url_directus
 
 Usuario: $email_directus
 
-Senha: $senha_directus
+Senha: $(printf '%q' "$SENHA")_directus
 
 EOL
 
@@ -17842,7 +17842,7 @@ echo ""
 echo -e "\e[33mUsuario:\e[97m $email_directus\e[0m"
 echo ""
 
-echo -e "\e[33mSenha:\e[97m $senha_directus\e[0m"
+echo -e "\e[33mSenha:\e[97m $(printf '%q' "$SENHA")_directus\e[0m"
 echo ""
 
 ## Creditos do instalador
@@ -17934,7 +17934,7 @@ while true; do
     echo ""
     
     ## Informação sobre Senha
-    echo -e "\e[33mSenha SMTP:\e[97m $senha_vaultwarden\e[0m"
+    echo -e "\e[33mSenha SMTP:\e[97m $(printf '%q' "$SENHA")_vaultwarden\e[0m"
     echo ""
     
     ## Informação sobre Host
@@ -18017,7 +18017,7 @@ services:
       ## Dados do SMTP
       - SMTP_FROM=$email_vaultwarden
       - SMTP_USERNAME=$email_vaultwarden
-      - SMTP_PASSWORD=$senha_vaultwarden
+      - SMTP_PASSWORD=$(printf '%q' "$SENHA")_vaultwarden
       - SMTP_HOST=$host_vaultwarden
       - SMTP_PORT=$porta_vaultwarden
       - SMTP_SECURITY=$ssl_vaultwarden
@@ -18752,7 +18752,7 @@ services:
       - POSTGRES_HOST=postgres
       - POSTGRES_DB=nextcloud
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=$senha_postgres
+      - POSTGRES_PASSWORD=$(printf '%q' "$SENHA")_postgres
 
       ## Dados do Redis
       - REDIS_HOST=redis
@@ -19007,7 +19007,7 @@ services:
       - DATABASE_HOST=mysql
       - DATABASE_PORT=3306
       - DATABASE_USERNAME=root
-      - DATABASE_PASSWORD=$senha_mysql
+      - DATABASE_PASSWORD=$(printf '%q' "$SENHA")_mysql
 
       ## Secret Keys
       - JWT_SECRET=$jwt_secret
@@ -19587,7 +19587,7 @@ while true; do
     echo ""
 
     ## Informação sobre Senha do Email
-    echo -e "\e[33mSenha do Email:\e[97m $senha_email_supabase\e[0m"
+    echo -e "\e[33mSenha do Email:\e[97m $(printf '%q' "$SENHA")_email_supabase\e[0m"
     echo ""
 
     ## Informação sobre Host SMTP
@@ -19773,7 +19773,7 @@ services:
       - HOSTNAME=0.0.0.0
 
       ## Dados Postgres
-      - POSTGRES_PASSWORD=$Senha_Postgres ## Senha do Postgres #OK
+      - POSTGRES_PASSWORD=$(printf '%q' "$SENHA")_Postgres ## Senha do Postgres #OK
 
       ## Branding
       - DEFAULT_ORGANIZATION_NAME=OrionDesign ## Nome da Empresa
@@ -19882,7 +19882,7 @@ services:
       - GOTRUE_API_PORT=9999
       - API_EXTERNAL_URL=https://$url_supabase ## Url do Supabase
       - GOTRUE_DB_DRIVER=postgres
-      - GOTRUE_DB_DATABASE_URL=postgres://supabase_auth_admin:$Senha_Postgres@db:5344/supabase  ## Senha do Postgres #OK
+      - GOTRUE_DB_DATABASE_URL=postgres://supabase_auth_admin:$(printf '%q' "$SENHA")_Postgres@db:5344/supabase  ## Senha do Postgres #OK
       - GOTRUE_SITE_URL=https://$url_supabase ## link do Supabase
       - GOTRUE_URI_ALLOW_LIST=
       - GOTRUE_JWT_ADMIN_ROLES=service_role
@@ -19900,7 +19900,7 @@ services:
       - GOTRUE_SMTP_HOST=$smtp_email_supabase ## Host SMTP
       - GOTRUE_SMTP_PORT=$porta_smtp_supabase ## Porta SMTP
       - GOTRUE_SMTP_USER=$usuario_email_supabase ## Usuario SMTP
-      - GOTRUE_SMTP_PASS=$senha_email_supabase ## Senha SMTP
+      - GOTRUE_SMTP_PASS=$(printf '%q' "$SENHA")_email_supabase ## Senha SMTP
       - GOTRUE_SMTP_SENDER_NAME=$email_supabase ## Email SMTP
 
       ## Paths SMTP
@@ -19924,7 +19924,7 @@ services:
 
     environment:
       ## Dados postgres
-      - PGRST_DB_URI=postgres://authenticator:$Senha_Postgres@db:5344/supabase  ## Senha do Postgres #OK
+      - PGRST_DB_URI=postgres://authenticator:$(printf '%q' "$SENHA")_Postgres@db:5344/supabase  ## Senha do Postgres #OK
       - PGRST_DB_SCHEMAS=public,storage,graphql_public
       #- PGRST_DB_SCHEMAS=public
       - PGRST_DB_ANON_ROLE=anon
@@ -19963,7 +19963,7 @@ services:
       - DB_HOST=db
       - DB_PORT=5344 ## Porta do Postgres
       - DB_USER=supabase_admin
-      - DB_PASSWORD=$Senha_Postgres # OK
+      - DB_PASSWORD=$(printf '%q' "$SENHA")_Postgres # OK
       - DB_NAME=supabase
       - DB_AFTER_CONNECT_QUERY=SET search_path TO _realtime
       - DB_ENC_KEY=supabaserealtime
@@ -20008,7 +20008,7 @@ services:
 
       ## Dados Postgrest
       - POSTGREST_URL=http://rest:3000
-      - DATABASE_URL=postgres://supabase_admin:$Senha_Postgres@db:5344/supabase  ## Senha do Postgres #OK
+      - DATABASE_URL=postgres://supabase_admin:$(printf '%q' "$SENHA")_Postgres@db:5344/supabase  ## Senha do Postgres #OK
       - DB_INSTALL_ROLES=false
       - FILE_SIZE_LIMIT=52428800
 
@@ -20090,7 +20090,7 @@ services:
       - PG_META_DB_PORT=5344 ## Porta do Postgres
       - PG_META_DB_NAME=supabase
       - PG_META_DB_USER=supabase_admin
-      - PG_META_DB_PASSWORD=$Senha_Postgres  ## Senha do Postgres # OK
+      - PG_META_DB_PASSWORD=$(printf '%q' "$SENHA")_Postgres  ## Senha do Postgres # OK
 
 ## --------------------------- ORION --------------------------- ##
 
@@ -20115,7 +20115,7 @@ services:
       - SUPABASE_URL=http://kong:8000
 
       ## Dados Postgres
-      - SUPABASE_DB_URL=postgresql://postgres:$Senha_Postgres@db:5344/supabase  ## Senha do Postgres #OK
+      - SUPABASE_DB_URL=postgresql://postgres:$(printf '%q' "$SENHA")_Postgres@db:5344/supabase  ## Senha do Postgres #OK
       
       ## ANON_KEY & SERVICE_KEY
       - SUPABASE_ANON_KEY=$ANON_KEY ## ANON_KEY
@@ -20151,9 +20151,9 @@ services:
       - DB_DATABASE=supabase
       - DB_HOSTNAME=db
       - DB_PORT=5344
-      - DB_PASSWORD=$Senha_Postgres # OK
+      - DB_PASSWORD=$(printf '%q' "$SENHA")_Postgres # OK
       - DB_SCHEMA=_analytics
-      - POSTGRES_BACKEND_URL=postgresql://supabase_admin:$Senha_Postgres@db:5344/supabase # OK
+      - POSTGRES_BACKEND_URL=postgresql://supabase_admin:$(printf '%q' "$SENHA")_Postgres@db:5344/supabase # OK
       - POSTGRES_BACKEND_SCHEMA=_analytics
 
       ## Logflare
@@ -20204,8 +20204,8 @@ services:
       - POSTGRES_HOST=/var/run/postgresql
       - PGPORT=5344 ## Porta do Postgres
       - POSTGRES_PORT=5344 ## Porta do Postgres
-      - PGPASSWORD=$Senha_Postgres  ## Senha do Postgres #OK
-      - POSTGRES_PASSWORD=$Senha_Postgres  ## Senha do Postgres #OK
+      - PGPASSWORD=$(printf '%q' "$SENHA")_Postgres  ## Senha do Postgres #OK
+      - POSTGRES_PASSWORD=$(printf '%q' "$SENHA")_Postgres  ## Senha do Postgres #OK
       - PGDATABASE=supabase
       - POSTGRES_DB=supabase
 
@@ -20686,7 +20686,7 @@ while true; do
     echo ""
 
     ## Informação sobre URL
-    echo -e "\e[33mSenha SMTP:\e[97m $senha_smtp_lowcoder\e[0m"
+    echo -e "\e[33mSenha SMTP:\e[97m $(printf '%q' "$SENHA")_smtp_lowcoder\e[0m"
     echo ""
 
     ## Informação sobre URL
@@ -20820,7 +20820,7 @@ services:
       - LOWCODER_ADMIN_SMTP_HOST=$host_smtp_lowcoder
       - LOWCODER_ADMIN_SMTP_PORT=$porta_smtp_lowcoder
       - LOWCODER_ADMIN_SMTP_USERNAME=$user_smtp_lowcoder
-      - LOWCODER_ADMIN_SMTP_PASSWORD=$senha_smtp_lowcoder
+      - LOWCODER_ADMIN_SMTP_PASSWORD=$(printf '%q' "$SENHA")_smtp_lowcoder
       - LOWCODER_ADMIN_SMTP_AUTH=true
       - LOWCODER_ADMIN_SMTP_SSL_ENABLED=$smtp_secure_lowcoder_ssl
       - LOWCODER_ADMIN_SMTP_STARTTLS_ENABLED=$smtp_secure_lowcoder_startls
@@ -21122,7 +21122,7 @@ while true; do
     echo ""
 
     ## Informação sobre Senha Admin
-    echo -e "\e[33mSenha SMTP:\e[97m $senha_smtp_humhub\e[0m"
+    echo -e "\e[33mSenha SMTP:\e[97m $(printf '%q' "$SENHA")_smtp_humhub\e[0m"
     echo ""
 
     ## Informação sobre Senha Admin
@@ -21240,7 +21240,7 @@ services:
       - HUMHUB_MAILER_TRANSPORT_TYPE=smtp
       - HUMHUB_MAILER_SYSTEM_EMAIL_ADDRESS=$email_smtp_humhub
       - HUMHUB_MAILER_USERNAME=$user_smtp_humhub
-      - HUMHUB_MAILER_PASSWORD=$senha_smtp_humhub
+      - HUMHUB_MAILER_PASSWORD=$(printf '%q' "$SENHA")_smtp_humhub
       - HUMHUB_MAILER_SYSTEM_EMAIL_NAME=Suporte
       - HUMHUB_MAILER_HOSTNAME=$host_smtp_humhub
       - HUMHUB_MAILER_PORT=$porta_smtp_humhub
@@ -21249,7 +21249,7 @@ services:
       ## Dados do MySQL
       - HUMHUB_DB_HOST=mysql
       - HUMHUB_DB_USER=root
-      - HUMHUB_DB_PASSWORD=$senha_mysql
+      - HUMHUB_DB_PASSWORD=$(printf '%q' "$SENHA")_mysql
       - HUMHUB_DB_NAME=humhub
       $autoconfig_humhub
 
@@ -21370,7 +21370,7 @@ echo ""
 echo -e "\e[33mUsuario MySQL:\e[97m root\e[0m"
 echo ""
 
-echo -e "\e[33mSenha MySQL:\e[97m $senha_mysql\e[0m"
+echo -e "\e[33mSenha MySQL:\e[97m $(printf '%q' "$SENHA")_mysql\e[0m"
 echo ""
 
 echo -e "\e[33mBase de dados MySQL:\e[97m humhub\e[0m"
@@ -21553,7 +21553,7 @@ services:
       - LANGFLOW_NEW_USER_IS_ACTIVE=false ## false = Precisa autorizar novas inscrições
 
       ## Dados do Postgres
-      - LANGFLOW_DATABASE_URL=postgresql://postgres:$senha_postgres@postgres:5432/langflow
+      - LANGFLOW_DATABASE_URL=postgresql://postgres:$(printf '%q' "$SENHA")_postgres@postgres:5432/langflow
 
       ## Diretório
       - LANGFLOW_CONFIG_DIR=/app/flowise
@@ -21830,7 +21830,7 @@ services:
     environment:
       ## Dados Postgres
       - ZEP_STORE_TYPE=postgres
-      - ZEP_STORE_POSTGRES_DSN=postgres://postgres:$senha_pgvector@pgvector:5432/zep?sslmode=disable
+      - ZEP_STORE_POSTGRES_DSN=postgres://postgres:$(printf '%q' "$SENHA")_pgvector@pgvector:5432/zep?sslmode=disable
 
       ## Dados de acesso:
       - ZEP_AUTH_SECRET=$apikey_zep
@@ -22095,7 +22095,7 @@ services:
       - OPENPROJECT_CACHE_REDIS_URL=redis://redis:6379
 
       ## Dados do Postgres
-      - DATABASE_URL=postgresql://postgres:$senha_postgres@postgres:5432/openproject
+      - DATABASE_URL=postgresql://postgres:$(printf '%q' "$SENHA")_postgres@postgres:5432/openproject
 
       ## Configurações
       - OPENPROJECT_DEFAULT__LANGUAGE=pt-BR
